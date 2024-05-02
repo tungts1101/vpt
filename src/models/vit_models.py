@@ -16,6 +16,7 @@ from .build_vit_backbone import (
 )
 from .mlp import MLP
 from ..utils import logging
+from .deeplab_head import DeepLabHead
 logger = logging.get_logger("visual_prompt")
 
 
@@ -333,3 +334,41 @@ class SSLViT(ViT):
         else:
             raise ValueError("transfer type {} is not supported".format(
                 transfer_type))
+
+
+class SSLViTSegmentation(SSLViT):
+    def __init__(self, cfg):
+        super(SSLViTSegmentation, self).__init__(cfg)
+        
+    def setup_head(self, cfg):
+        self.neck = MLP(64 * self.feat_dim, [256 * self.feat_dim])
+        self.head = DeepLabHead(
+            in_channels=self.feat_dim, 
+            num_classes=cfg.DATA.NUMBER_CLASSES)
+
+        print(f"Segmentation: {self.neck, self.head}")
+    
+    def forward(self, x, return_feature=False):
+        if self.side is not None:
+            side_output = self.side(x)
+            side_output = side_output.view(side_output.size(0), -1)
+            side_output = self.side_projection(side_output)
+
+        if self.froze_enc and self.enc.training:
+            self.enc.eval()
+        x = self.enc(x)  # batch_size x self.feat_dim
+
+        if self.side is not None:
+            alpha_squashed = torch.sigmoid(self.side_alpha)
+            x = alpha_squashed * x + (1 - alpha_squashed) * side_output
+
+        if return_feature:
+            return x, x
+
+        x = x.flatten()
+        x = self.neck(x)
+        x = x.view(256, self.feat_dim)
+        x = x.unsqueeze(2).unsqueeze(3)
+        x = self.head(x)
+
+        return x

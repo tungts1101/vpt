@@ -134,6 +134,9 @@ _C.DIST_BACKEND = "nccl"
 _C.DIST_INIT_PATH = "env://"
 _C.DIST_INIT_FILE = ""
 
+# Barlow-Twin training
+_C.BARLOW = CfgNode()
+_C.BARLOW.LAMBD = 5e-3
 
 def get_cfg():
     """

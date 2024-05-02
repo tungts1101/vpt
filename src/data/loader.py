@@ -9,6 +9,9 @@ from ..utils import logging
 from .datasets.json_dataset import (
     CUB200Dataset, CarsDataset, DogsDataset, FlowersDataset, NabirdsDataset
 )
+from .datasets.pascal_voc_dataset import (
+    BarlowTwinPascalVOCDataset
+)
 
 logger = logging.get_logger("visual_prompt")
 _DATASET_CATALOG = {
@@ -16,7 +19,7 @@ _DATASET_CATALOG = {
     'OxfordFlowers': FlowersDataset,
     'StanfordCars': CarsDataset,
     'StanfordDogs': DogsDataset,
-    "nabirds": NabirdsDataset,
+    "nabirds": NabirdsDataset
 }
 
 
@@ -29,6 +32,8 @@ def _construct_loader(cfg, split, batch_size, shuffle, drop_last):
         # import the tensorflow here only if needed
         from .datasets.tf_dataset import TFDataset
         dataset = TFDataset(cfg, split)
+    elif dataset_name == 'pascal':
+        dataset = BarlowTwinPascalVOCDataset(cfg.DATA.DATAPATH, split)
     else:
         assert (
             dataset_name in _DATASET_CATALOG.keys()
